@@ -5,9 +5,15 @@ use std::{
     fs::{self, File},
     io::{copy, Cursor},
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use feed::{ChannelGetters, EnclosureGetters, FromUrl, ItemGetters};
+use reqwest::{
+    blocking::Client,
+    blocking::Response,
+    blocking::{self, Request, RequestBuilder},
+};
 use rss::{Channel, Item};
 
 fn main() {
@@ -27,6 +33,11 @@ fn main() {
     path.push(&root_path_name);
     fs::create_dir_all(Path::new(&root_path_name)).unwrap();
 
+    let reqwest_client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(100)) // we needed to increase the timeout
+        .build()
+        .unwrap();
+
     let item_count = channel.items().len();
     println!("Number of items:{}", item_count);
     println!();
@@ -35,10 +46,10 @@ fn main() {
         .items()
         .iter()
         .take(num)
-        .for_each(|item| download_item(item, &path))
+        .for_each(|item| download_item(item, &path, &reqwest_client));
 }
 
-fn download_item(item: &Item, path_buf: &PathBuf) {
+fn download_item(item: &Item, path_buf: &PathBuf, reqwest_client: &Client) {
     let title = item.title().unwrap().replace('/', "");
     println!("Downloading... {:?}", &title);
     let file_path_buf = path_buf.join(title.to_owned() + ".mp3"); //TODO use extension from url
@@ -47,7 +58,14 @@ fn download_item(item: &Item, path_buf: &PathBuf) {
         println!("Skiping...");
         return;
     }
-    let item_content_response = reqwest::blocking::get(item.enclosure().unwrap().url()).unwrap();
+    let item_content_response: blocking::Response = reqwest_client
+        .execute(
+            reqwest_client
+                .get(item.enclosure().unwrap().url())
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
     let mut item_content_cursor = Cursor::new(item_content_response.bytes().unwrap());
 
     println!("Copying... ");
