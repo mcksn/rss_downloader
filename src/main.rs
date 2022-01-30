@@ -1,22 +1,24 @@
 extern crate feed;
 extern crate rss;
+
+use crate::item::clone_item;
+use crate::item::download_item;
+
+mod item;
+
 use std::{
     env,
-    fmt::format,
     fs::{self, File},
-    io::{copy, Cursor, Write},
-    path::{Path, PathBuf},
+    io::{Write},
+    path::{PathBuf},
     time::Duration,
 };
 
-use feed::{ChannelGetters, EnclosureGetters, FromUrl, ItemGetters};
-use reqwest::{
-    blocking::Client,
-    blocking::Response,
-    blocking::{self, Request, RequestBuilder},
-};
-use rss::{Channel, Item, EnclosureBuilder, Enclosure};
-use std::convert::TryInto;
+use feed::{ChannelGetters};
+use feed::ItemGetters;
+
+use rss::{Channel, Item};
+
 
 fn main() {
     let feed_url = match env::var("FEED_URL") {
@@ -43,7 +45,7 @@ fn main() {
 
     let channel = Channel::read_from(&source_rss_xml_content[..]).unwrap();
     let mut path = PathBuf::new();
-    let root_path_name = map_feed_title_to_filename(channel.title());
+    let root_path_name = map_feed_title_to_dirname(channel.title());
     path.push(&feed_root);
     path.push(&root_path_name);
     fs::create_dir_all(&path).unwrap();
@@ -54,18 +56,7 @@ fn main() {
     let mut cloned_channel = channel.clone();
     let map = cloned_channel.items().iter().take(num)
     .map(|item| {
-        let mut item_cloned = item.clone();
-        let mut enclosure = Enclosure::default();
-        enclosure.set_url(format!(
-            "{}/{}/{}",
-            &my_url,
-            map_feed_title_to_filename(&cloned_channel.title()),
-            map_item_title_to_filename(&item.title().unwrap()).as_str()
-        ));
-        enclosure.set_mime_type(item.enclosure().unwrap().mime_type());
-        enclosure.set_length(item.enclosure().unwrap().length());
-        item_cloned.set_enclosure(enclosure);
-        item_cloned
+        clone_item(&map_feed_title_to_dirname(cloned_channel.title()), item, &my_url)
     })
     .collect::<Vec<Item>>();
 
@@ -89,34 +80,6 @@ fn main() {
         .for_each(|item| download_item(item, &path, &reqwest_client));
 }
 
-fn download_item(item: &Item, path_buf: &PathBuf, reqwest_client: &Client) {
-    let filename = map_item_title_to_filename(item.title().unwrap());
-    println!("Downloading... {:?}", &filename);
-    let file_path_buf = path_buf.join(&filename);
-    println!("Filename length:{}", &filename.len());
-    if file_path_buf.is_file() {
-        println!("Skiping...");
-        return;
-    }
-    let item_content_response: blocking::Response = reqwest_client
-        .execute(
-            reqwest_client
-                .get(item.enclosure().unwrap().url())
-                .build()
-                .unwrap(),
-        )
-        .unwrap();
-    let mut item_content_cursor = Cursor::new(item_content_response.bytes().unwrap());
-
-    println!("Copying... ");
-    let mut file = File::create(file_path_buf).unwrap();
-    copy(&mut item_content_cursor, &mut file).unwrap();
-}
-
-fn map_item_title_to_filename(title: &str) -> String {
-    return title.replace('/', "") + &".mp3".to_owned(); // TODO use extension from item
-}
-
-fn map_feed_title_to_filename(title: &str) -> String {
+fn map_feed_title_to_dirname(title: &str) -> String {
     return title.replace(' ', "_").to_owned(); // TODO use extension from item
 }
