@@ -1,3 +1,5 @@
+extern crate urlencoding;
+
 use std::{
     fs::{File},
     io::{copy, Cursor},
@@ -11,18 +13,20 @@ use reqwest::{
 };
 use rss::{Enclosure, Item};
 
+use urlencoding::encode;
+
 
 // TODO refactor to Item traits
 
 pub fn clone_item(path_to_item: &str, item: &Item, my_url: &str) -> Item {
     let mut item_cloned = item.clone();
     let mut enclosure = Enclosure::default();
-    enclosure.set_url(format!(
+    enclosure.set_url(encode(&format!(
         "{}/{}/{}",
         &my_url,
         path_to_item,
         map_item_title_to_filename(&item.title().unwrap()).as_str()
-    ));
+    )));
     enclosure.set_mime_type(item.enclosure().unwrap().mime_type());
     enclosure.set_length(item.enclosure().unwrap().length());
     item_cloned.set_enclosure(enclosure);

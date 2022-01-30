@@ -4,21 +4,21 @@ extern crate rss;
 use crate::item::clone_item;
 use crate::item::download_item;
 
+
 mod item;
 
 use std::{
     env,
     fs::{self, File},
-    io::{Write},
-    path::{PathBuf},
+    io::Write,
+    path::PathBuf,
     time::Duration,
 };
 
-use feed::{ChannelGetters};
+use feed::ChannelGetters;
 use feed::ItemGetters;
 
 use rss::{Channel, Item};
-
 
 fn main() {
     let feed_url = match env::var("FEED_URL") {
@@ -54,15 +54,24 @@ fn main() {
     let mut rssxml_file = File::create(path_buf_for_rssxml).unwrap();
 
     let mut cloned_channel = channel.clone();
-    let map = cloned_channel.items().iter().take(num)
-    .map(|item| {
-        clone_item(&map_feed_title_to_dirname(cloned_channel.title()), item, &my_url)
-    })
-    .collect::<Vec<Item>>();
+    let map = cloned_channel
+        .items()
+        .iter()
+        .take(num)
+        .map(|item| {
+            clone_item(
+                &map_feed_title_to_dirname(cloned_channel.title()),
+                item,
+                &my_url,
+            )
+        })
+        .collect::<Vec<Item>>();
 
     cloned_channel.set_items(map);
 
-    rssxml_file.write_all(cloned_channel.to_string().as_bytes()).unwrap();
+    rssxml_file
+        .write_all(cloned_channel.to_string().as_bytes())
+        .unwrap();
 
     let reqwest_client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(100)) // we needed to increase the timeout

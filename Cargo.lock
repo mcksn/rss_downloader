@@ -851,6 +851,7 @@ dependencies = [
  "feed",
  "reqwest",
  "rss 2.0.0",
+ "urlencoding",
 ]
 
 [[package]]
@@ -1108,6 +1109,12 @@ dependencies = [
  "matches",
  "percent-encoding 2.1.0",
 ]
+
+[[package]]
+name = "urlencoding"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68b90931029ab9b034b300b797048cf23723400aa757e8a2bfb9d748102f9821"
 
 [[package]]
 name = "vcpkg"
