@@ -1,10 +1,6 @@
 extern crate feed;
 extern crate rss;
 
-use crate::item::clone_item;
-use crate::item::download_item;
-
-
 mod item;
 
 use std::{
@@ -17,6 +13,9 @@ use std::{
 
 use feed::ChannelGetters;
 use feed::ItemGetters;
+
+use item::Cloneable;
+use item::Downloadable;
 
 use rss::{Channel, Item};
 
@@ -59,9 +58,8 @@ fn main() {
         .iter()
         .take(num)
         .map(|item| {
-            clone_item(
+            item.clone_item(
                 &map_feed_title_to_dirname(cloned_channel.title()),
-                item,
                 &my_url,
             )
         })
@@ -86,7 +84,7 @@ fn main() {
         .items()
         .iter()
         .take(num)
-        .for_each(|item| download_item(item, &path, &reqwest_client));
+        .for_each(|item| item.download(&path, &reqwest_client));
 }
 
 fn map_feed_title_to_dirname(title: &str) -> String {
